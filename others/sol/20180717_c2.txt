@@ -1,0 +1,68 @@
+producer: process[1, ..., N]
+    while True:
+        value = produce()
+        lifobuf.push(value)
+
+consumer: process[1, ..., M]
+    while True:
+        value = lifobuf.pop()
+        process(value)
+
+Class LIFObuf
+{
+    stack <T> values
+    semaphore mutex = semaphore(1)
+
+    void push(T value)
+        mutex.P()
+        values.push(value)
+        mutex.V()
+
+    T pop(void)
+        mutex.P()
+        T value
+        if (values.isEmpty())
+            value = NULL
+        else
+            value = values.pop()
+        mutex.V()
+        return value
+}
+
+/*
+**  La soluzione sul wiki usa un semaforo ok2consume inizializzato a 0 per non permettere la pop se non c'è niente nello stack
+**  Qua io invece controllo con isEmpty(), va bene uguale?
+**
+**  Supponendo che l'uso di isEmpty() vada bene c'è comunque una differenza, nella soluzione del wiki se non c'è nessun valore da consumare la pop
+**  si blocca finché non viene prodotto un valore, nel mio caso invece non aspetta ma ritorna NULL
+**  Quindi qual è il comportamento che dovrebbe avere la pop? Dovrebbe aspettare che ci sia un valore o se non esplicitamente specificato va bene
+**  in entrambi i modi?
+*/
+
+SOLUZIONE wiki:
+
+class LIFOBuffer {
+	stack<T> s;
+	semaphore mutex(1); // mutua esclusione
+	semaphore ok2consume(0);
+
+	void push (T value) {
+		mutex.P();
+		s.push(value);
+                // (1)
+		mutex.V()
+
+		ok2consume.V()  // Curiosità: che succede se spostiamo quest'istruzione in (1)?
+	}
+
+	T pop () {
+		T value;
+
+		ok2consume.P();
+		mutex.P();
+		value = s.pop();
+		mutex.V();
+
+		return value;
+	}
+}

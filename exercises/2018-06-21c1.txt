@@ -1,0 +1,70 @@
+#define MAX //assumo > 0
+#define LOC_N
+
+
+
+monitor tmon {
+	int carico;
+	int da_imbarcare[LOC_N];
+	bool sbarcato;
+	int posizione;
+	bool free_rampa;		//usato solo per sbarco
+	condition ok2imbarca;
+	condition ok2sbarca;
+	condition ok2salpa;
+
+	
+	tmon {
+		carico = 0;
+		da_imbarcara = {0..0};
+		sbarcato = {false...false};
+		sbarcato[porto_corrente] = true;
+		posizione = porto_corrente;
+		free_rampa = false;
+	}
+
+	al_porto(loc) {
+		posizione = loc;
+		ok2sbarca.signal();
+		ok2salpa.wait();
+		sbarcato = false;
+	}
+
+	imbarca(loc) {
+		da_imbarcare++;
+		if(carico == MAX || posizione != loc || !sbarcato || da_imbarcare[loc] > 1) {
+			//se non c'è la nave o è piena oppure c'è già fila
+			//se la nave è in viaggo il carico è MAX
+			//tuttavia serve il controllo su sbarcato se la nave è attraccata a un altro porto
+			ok2imbarca.wait();
+		}
+	}
+
+	imbarcato(loc) {
+		da_imbarcare[loc]--;
+		carico++;		
+		//assumo MAX>0, altrimenti la condizione andrebbe messa in imbarca()
+		if(carico == MAX) {
+			sbarcato = false;
+			ok2salpa.signal();
+		}
+		else
+			ok2imbarca.signal();
+	}
+
+	sbarca(loc) {
+		if(posizione != loc || !free_rampa)
+			ok2sbarca.wait();
+		free_rampa = false;
+	}
+
+	sbarcato(loc) {
+		carico--;
+		free_rampa = true;
+		if(carico > 0)
+			ok2sbarca.signal();
+		else
+			ok2imbarca.signal();
+	}
+
+}

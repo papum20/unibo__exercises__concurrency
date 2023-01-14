@@ -1,0 +1,35 @@
+/* dato asincrono, implemeta sincrono
+	con selezione ordinata
+*/
+
+
+#define MAX //max numero processi
+#define MSG_MAX	//max messaggi
+
+//assumo processi numerati da 0 a MAX-1
+
+//usa una memoria per ricordare tutti i messaggi (cosi da poterli ripescare in ordine)
+//(la memoria è privata di ogni processo)
+msgtype cache[MAX + 1][MSG_MAX];	//+1 per any
+int size[MAX + 1] = {0...0};
+
+void snsend(msgtyoe msg, pid_t dest) {
+	asend(<getpid(), msg>, dest);
+	ack = areceive(dest);
+}
+
+msgtype snrecv(pid_t sender, int n) {
+	asend(<getpid(), "ACK">, sender);
+	//processi=0..max-1, any=max
+	int n1 = n;
+	if(n == 0) n1 = 1;
+	while(size[sender] < n1) {
+		<pid, msg> = arecv(sender);
+		cache[sender][size[sender]++] = msg;
+		//assumo che non si sforino le dimensioni massime
+		if(sender != ANY) cache[ANY][size[ANY]++] = msg;
+	}
+	//ricevuto messaggio n-esimo
+	if(n == 0) return cache[sender][size[sender] - 1];
+	else return cache[sender][n - 1];
+}

@@ -1,0 +1,24 @@
+
+lifobuf {
+
+	stack<value_t> S = new stack();
+	semaphore mutex(1);
+	semaphore ok2consume(0);
+
+	void push(value_t value) {
+		mutex.P();
+		S.push(value);
+		ok2consume.V();
+		mutex.V();
+	}
+
+
+	value_t pop() {
+		ok2consume.P();
+		mutex.P();
+		value_t t = S.pop();
+		mutex.V();
+		return t;
+	}
+
+}
