@@ -1,0 +1,29 @@
+#define MAXELEM
+
+monitor mbuf {
+int got = 0;
+queue<type> buf = new queue<type>();
+condition ok2add;
+condition ok2get;
+
+	void add(type data, int n) {
+		if(buf.size() == MAXELEM)
+			ok2add.wait();
+		buf.enqueue(<data,n>);
+		ok2get.signal();
+	}
+
+
+	type get(void) {
+		if(buf.size() == 0)
+			ok2get.wait();
+		<type,int> <data,n> = buf.top();
+		got++;
+		if(got == n) {
+			buf.dequeue();
+			got = 0;
+			ok2add.signal();
+		}
+		return data;
+	}	
+}

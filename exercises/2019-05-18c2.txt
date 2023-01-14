@@ -1,0 +1,25 @@
+semaphore mutex(1);
+semaphore wait_exit(0);
+int in = 0;
+
+
+SAU_enter() 
+	mutex.P();
+	in++;
+	mutex.V();
+}
+
+SAU_exit() {
+	mutex.P();
+	in--;
+	if(in == 0) {	//l'ultimo a uscire sblocca
+		wait_exit.V();
+		wait_exit.P();
+		mutex.V();
+	}
+	else {
+		mutex.V();
+		wait_exit.P();
+		wait_exit.V();
+	}
+}

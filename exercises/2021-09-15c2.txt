@@ -1,0 +1,16 @@
+void chained_send(T msg, list<pid> dests) {
+	if(!dests.empty()) {
+		pid dest = dests.first();
+		ssend(<dests, msg>, dest);
+	}
+}
+
+
+T chained_recv(void) {
+	<list<pid>, T> <dests, msg> = sreceive(ANY);
+	pid dest = dests.first();
+
+	if(dest == get_pid())	// se era per me
+		dests.remove_first();
+	chained_send(msg, dests);		
+}

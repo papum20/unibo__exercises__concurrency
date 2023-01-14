@@ -1,0 +1,14 @@
+//asincrono non fifo:
+void nfasend(msg_t msg, pid_t dest);
+msg_t nfarecv(pid_t sender);
+
+
+
+//asincrono fifo
+
+void asend(msg_t msg, pid_t dest) {
+}
+
+msg_t arercv(pid_t sender) {
+
+}

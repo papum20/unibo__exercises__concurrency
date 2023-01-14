@@ -1,0 +1,29 @@
+monitor crossing {
+	bool free;			//true quando incrocio libero e nessuno in attesa
+	int waiting[4];
+	condition ok[4];
+
+	crossing() {
+		free = true;
+	}
+
+	enter(direction) {
+		if(!free)
+			ok[direction].wait();
+		free = false;
+	}
+
+	exit(direction) {	//assumo direction è quella di provenienza, altrimenti andrebbe memorizzata all'entrata
+		int dir = direction;
+		for(int i = 0; i < 4; i++) {
+			dir = (dir + 1) % 4;
+			if(waiting[dir] > 0) {
+				ok[dir].signal();
+				return;
+			}
+		}
+		//se non ha trovato nessuna direzione
+		free = true
+	}
+
+}

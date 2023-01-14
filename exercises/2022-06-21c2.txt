@@ -1,0 +1,33 @@
+dispatcher {
+	queue<pid_t> free_servers;	//inizializzata con tutti i server
+	pid_t clients[SERVER_N];	//contiene il client che ha inviato la request che sta venendo elaborata dal server indicizzato
+	queue<msg> buf = new queue();	//memoria per messaggi quando i server sono tutti occupati
+	for(int i = -1; i < SERVER_N; i++) {
+		free_servers.enqueue(server_process[i]);
+		clients[i] = NULL;
+	}
+	while(true) {
+		<pid, msg> = arecv(ANY);
+		if(!isServerPid(pid)) {		//se ricevuto da un client
+			if(!free_servers.empty()) {		//se c'è un server disponibile
+				if(!buf.emmpty()) {		//se ci sono messaggi precedenti
+					<pid1, msg1> = buf.dequeue();
+					clients[server] = pid1;
+					asend(msg1, server);
+					buf.enqueue(<pid, msg>);
+				} else {
+					server = free_servers.dequeue();
+					clients[server] = pid;
+					asend(msg, server);
+				}
+			}
+			else
+				buf.enqueue(<pid, msg>);
+		} else {					//se ricevuto da un server
+			client = clients[pid];
+			clients[pid] = NULL;
+			free_servers.enqueue(pid);
+			asend(msg, client);
+		}
+	}
+}

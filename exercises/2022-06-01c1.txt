@@ -1,0 +1,11 @@
+
+
+
+int wait_tick(int nticks) {
+
+}
+
+
+void tick(void) {
+
+}

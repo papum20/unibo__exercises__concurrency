@@ -1,0 +1,18 @@
+void mulsend(pid_t destination, T msg, int times) {
+	for(int i = 0; i < times; i++)
+		ssend((pid,msg), destination);
+	ssend("end", destination);
+}
+
+
+T mulrecv(pid_t sender) {
+	T msg;
+	if(sender == 0)
+		sender, msg = sreceive(ANY);
+	if(msg == "end") return "";
+	T end_msg;
+	do {
+		sender, end_msg = sreceive(sender);
+	} while(end_msg != "end");
+	return msg;
+}

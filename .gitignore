@@ -1,2 +1,7 @@
 # c
 *.o
+# binaries
+*bin/
+# executables
+*exe/
+

@@ -1,0 +1,17 @@
+/*
+dato un servizio di message passing asincrono, senza fare uso di processi server,
+implementare un servizio di message passing parzialmente sincrono
+(pssend bloccante, psreceive no, ritorna None se non riceve messaggio).
+*/
+
+
+void pssend(object msg, process q) {
+	asend(msg, q);
+	object ack = receive(q);
+}
+
+
+Object psreceive(process p) {
+	<object,process> <msg,q> = areceive(p);
+
+}

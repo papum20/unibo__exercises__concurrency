@@ -1,0 +1,29 @@
+int status = 0;
+int blocked = 0;
+condition all1;
+
+
+void set(int bit2set) {
+	status = status | bit2set;
+	if(status == -1)
+		all1.signal();
+}
+
+
+void unset(int bit2unset) {
+	status = status & !(bit2unset);
+}
+
+
+void statuswait(int bit2wait) {
+	if(status == -1) {
+		if(blocked == 0)
+			//vuoto: puo passare
+		else 
+	} else {
+		blocked++;
+		all1.wait();	
+		all1.signal();	
+		blocked--;
+	}
+}
