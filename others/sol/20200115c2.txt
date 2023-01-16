@@ -1,0 +1,27 @@
+Esercizio c.2: Dato un servizio di message passing asincrono scrivere un servizio di message passing sincrono a
+spedizione multipla (senza fare uso di processi server). Devono essere previste due funzioni:
+mulsend(pid_t destination, T msg, int times)
+T mulrecv(pid_t sender)
+La chiamata mulsend spedisce il messaggio msg al processo destination times volte. Solo quando il messaggio è
+stato ricevuto times volte da destination l'esecuzione della funzione mulsend viene completata.
+Il ricevente può indicare il valore zero come sender nella mulrecv per indicare che vuole ricevere un messaggio da
+qualsiasi mittente.
+
+
+mulsend(pid_t destination, T msg, int times) {
+	for (int i = 0; i < times; i++) {
+		asend(<msg, getpid()>, destination);
+	}
+	
+	for (int i = 0; i < times; i++) {
+		ack = arecv(destination);
+	}
+}
+
+T mulrecv(pid_t sender) {
+	// utilizzo send così può essere diverso da 0
+	<msg, send> = arecv(sender);
+	asend(ACK, send);
+	
+	return msg;
+}

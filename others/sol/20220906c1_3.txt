@@ -1,0 +1,36 @@
+
+
+class bitcond{
+  int bitmap;
+  int lastBitmask;
+  int has=0;
+  
+  condition waiting;
+  condition c;
+
+  void set(int i){
+    bitmap|=i; 
+      if(bitmap&lastBitmask == bitmap) c.signal();
+  }
+  void unset(int i){
+    bitmap&=~i; 
+  }
+  void statuswait(int i){
+    has++; 
+    if(has>1){
+      waiting.wait();
+    }
+
+    if(!(bitmap&i==i)){
+      lastBitmask=i;
+      c.wait();
+    }
+
+    waiting.signal();
+    has--;
+  }
+  bitcond(){
+    bitmap = 0;
+  }
+}
+

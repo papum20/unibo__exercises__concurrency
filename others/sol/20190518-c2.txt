@@ -1,0 +1,45 @@
+# Es c.2 del 18/05/2019
+Una *sezione-acritica-unificante* (SAU) è una sequenza di istruzioni che può essere eseguita contemporaneamente da più processi, ma i processi possono uscirne solo quanto tutti i processi che stanno eseguendo la SAU ne completano l'esecuzione.
+Ogni processo chiama:
+
+```
+SAU_enter()
+... codice SAU
+SAU_exit()
+```
+---
+
+// Soluzione WIKI
+
+shared int num_proc; // numero di processi dentro SAU
+shared queue<semaphore> queue_sem; // coda per indicare i processi da sbloccare
+
+semaphore mutex(1);
+
+void SAU_enter() {
+    mutex.P();
+    num_proc++;
+    mutex.V();
+}
+
+void SAU_exit() {
+    mutex.P();
+    num_proc--;
+
+    if (num_proc > 0) {
+        semaphore sem = new semaphore(0);
+        queue_sem.enqueue(sem);
+        mutex.V();
+        sem.P();
+    }
+    else {
+        while (queue.size > 0) {
+            semaphore sem = queue_sem.dequeue();
+            sem.V();
+        }
+        mutex.V();
+    }
+
+
+    mutex.V();
+}

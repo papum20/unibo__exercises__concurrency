@@ -1,0 +1,39 @@
+Una sezione-acritica-unificante (SAU) è una sequenza di istruzioni che può essere eseguita
+contemporaneamente da più processi, ma i processi possono uscirne solo quanto tutti i processi che stanno
+eseguendo la SAU ne completano l'esecuzione.
+Ogni processo chiama:
+ SAU_enter()
+ ... codice SAU
+ SAU_exit()
+Scrivere le funzioni SAU_enter e SAU_exit mediante l'uso di semafori.
+
+// SOLUZIONE PROPOSTA
+
+shared int num_proc; // numero di processi dentro la SAU.
+shared std::queue<int> queue;
+semaphore mutex(1);
+
+void SAU_enter() {
+    mutex.P();
+    num_proc++;
+    mutex.V();
+}
+
+
+void SAU_exit() {
+    mutex.P();
+    num_proc--;
+    if (num_proc > 0) {
+        semaphore sem(0);
+        queue.add(sem);
+        mutex.V();
+        sem.P();
+    }
+
+    if (queue.size() > 0) {
+        semaphore sem = queue.pop(); // delete and retrieve prom queue
+        sem.V();
+    } else {
+        mutex.V();
+    }
+}

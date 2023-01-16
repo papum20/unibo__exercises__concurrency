@@ -1,0 +1,41 @@
+//non ho capito il comando
+
+/*
+codice eseguito dai processi (comando):
+def eriempisvuotasynch():
+	riempisvuota.entra(getpid())
+	//dentro riempisvuota
+	riempisvuota.esci(getpid())
+	//fuori riempisvuota
+*/
+
+#define MAX
+
+//implementazione che presume monitor fifo con urgent stack
+
+monitor riempisvuota {
+	int size;
+	condition stack;
+	condition heap;
+
+
+	riempisvuota() {
+		size = 0;
+		sleeping = 0;
+	}
+
+	entra(pid_t pid) {
+		size++;
+		if(size == MAX)
+			stack.signal();
+		else {
+			stack.wait();
+			heap.wait();
+		}
+	}
+
+	esci(pid_t pid) {
+		
+	}
+
+}

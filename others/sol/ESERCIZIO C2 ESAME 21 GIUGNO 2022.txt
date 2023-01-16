@@ -1,0 +1,87 @@
+ESERCIZIO C2 ESAME 21 GIUGNO 2022
+
+TRACCIA:
+
+Un servizio viene fornito in modalità client-server usando message passing asincrono.
+Al fine di aumentare l'efficienza si decide di usare molti server e un processo dispatcher in grado
+di distribuire le
+richieste agli N server. 
+Quando un processo server è libero riceve dal dispatcher la prossima richiesta da elaborare:
+
+codice di ogni client (tanti!): .....
+asend(<getpid(), request>, dispatcher)
+result = arecv(dispatcher)
+
+server process[i], i = 0, ..., N-1:
+ request = arecv(dispatcher)
+ result = compute(request)
+ asend(<getpid(), result>, dispatcher)
+
+
+Scrivere il processo dispatcher. (il dispatcher conosce i pid di tutti i server).
+
+
+
+SOLUZIONE:
+
+message passing asincrono (asend (asincrono), areceive (bloccante) )
+
+idea:
+
+-uso una coda dei server liberi. Una volta che un server invia la risposta al dispatcher, allora significa che si è liberato:
+ inserisco il suo PID nella coda.
+-uso una tabella hash per mantenere la corrispondenza tra un client in attesa e un server occupato.
+
+
+
+process dispatcher {
+	//PID di tutti gli n server (il dispatcher conosce i pid di tutti i server per ipotesi della traccia)
+	int PID[n];
+	
+	//Crea una coda dei pid dei server liberi a partire dall'array dei PID: inizialmente, tutti i server sono liberi.
+	queue freeServers = queueFromArray(PID);
+
+	//Creo una tabella HASH dove le chiavi sono i PID dei server.
+	//serverClients.getValue(PID) = pid del client che attende la risposta dal server "PID".
+	HashTable serversClients = new HashTable(n);
+
+	while(true) {
+		//Attendo una richiesta da chiunque (client o server)
+		<pid, request> = arecv(ANY);
+
+		if (pid in PID) {
+			//Caso in cui ho ricevuto una risposta da un server
+			
+			//Il server mi ha inviato la risposta: ora è libero!
+			freeServers.enqueue(pid);
+
+			clientPid = serverClients.getVaue(pid);
+
+			asend(request, clientPid);
+
+		} else {
+			//Caso in cui ho ricevuto una richiesta da un client
+
+			if (!freeServers.isEmpty()) {
+				//Caso in cui almeno un server è libero
+				
+				//Estraggo un server libero dalla coda
+				serverPid = freeServers.dequeue();
+
+				//Inserisco nella cella di chiave "serverPid" il valore "pid", che è il pid del client che attende la risposta dal server con pid "serverPid".
+				serversClients.setValue(serverPid, pid);
+
+				asend(request, serverPid);
+			} else {
+				//Caso in cui nessun server è libero
+				
+				//Rispondo al client con un messaggio di errore!
+				asend("ERRORE: I server sono tutti occupati!", pid);
+			}
+
+		}
+	}
+	
+}
+
+

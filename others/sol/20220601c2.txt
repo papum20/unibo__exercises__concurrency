@@ -1,0 +1,49 @@
+http://www.cs.unibo.it/~renzo/so/compiti/2022.06.01.tot.pdf
+
+Esercizio c.2: Un servizio di message passing asincrono non fifo (nfasend/nfarecv) consegna in tempo finito tutti i
+messaggi spediti ma non è garantito che i messaggi vengano ricevuti nell'ordine nel quale sono stati spediti.
+void nfasend(msg_t msg, pid_t dest)
+msg_t nfarecv(pid_t sender)
+Dato un servizio di message passing asincrono non fifo scrivere una libreria che implementi il servizio di message
+passing asincrono fifo:
+void asend(msg_t msg, pid_t dest)
+msg_t arecv(pid_t sender)
+Nota: sia il servizio dato (non fifo) sia quello da implementare (fifo) consentono la ricezione solo da mittente specificato
+(non supportano ANY/*).
+
+// SOLUZIONE PROPOSTA
+
+void nfasend(msg_t msg, pid_t dest);
+msg_t nfarecv(pid_t sender);
+
+
+// array di grandezza di massimi numero di processi, inizializzato a 0
+// utilizzato per contare il numero di messaggi inviati da un certo process
+// a un certo processo.
+int num_sender[MAX_PROC][MAX_PROC];
+void asend(msg_t msg, pid_t dest) {
+	src = getpid();
+	nfasend(<msg, num_send[src][dest]>, dest);
+	num_sender[p][dest]++;
+}
+
+// molto simile a num_sender, ma è utilizzato per contare il numero di messaggi
+// ricevuti, in ordine.
+int num_receiver[MAX_PROC][MAX_PROC];
+msg_t arecv(pid_t sender) {
+	p = getpid();
+
+	(msg, num_mess) = nfarecv(sender);
+
+	while (num_mess != num_receiver[p][sender]) {
+		// se il numero del messaggio non è quello che voglio ricevere
+		// me lo reinvio, sarà gestito da un arecv futuro, e aspetto 
+		// che arrivi il messaggio col numero corretto. Tanto la 
+		// consegna è garantita, quindi non ho starvation per i messaggi.
+		nfasend(<msg, num_mess>, p);
+		(msg, num_mess) = nfarecv(sender);
+	}
+
+	num_receiver[p][sender]++;
+	return msg;	
+}

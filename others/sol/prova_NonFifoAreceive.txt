@@ -1,0 +1,99 @@
+//esecuzione di 20220601c2_v2.txt
+
+Libera fa asend '1' a Flecs
+	void asend(msg = '1', dest = Flecs) {
+		src = getpid(); //src = Libera
+		nfasend(<'1', 0>, Flecs);
+		num_sender[Libera][Flecs]++; //ovvero = 1
+	}
+
+Davoli fa asend 'ciao' a Flecs
+	void asend(msg = 'ciao', dest = Flecs) {
+		src = getpid(); //src = Davoli
+		nfasend(<'ciao', 0>, Flecs);
+		num_sender[Davoli][Flecs]++; //ovvero = 1
+	}
+
+Libera fa asend '3' a Flecs
+	void asend(msg = '3', dest = Flecs) {
+		src = getpid(); //src = Libera
+		nfasend(<'3', 1>, Flecs);
+		num_sender[Libera][Flecs]++; //ovvero = 2
+	}
+
+Libera fa asend '4' a Flecs
+	void asend(msg = '4', dest = Flecs) {
+		src = getpid(); //src = Libera
+		nfasend(<'4', 2>, Flecs);
+		num_sender[Libera][Flecs]++; //ovvero = 3
+	}
+
+Davoli fa asend 'mare' a Flecs
+	void asend(msg = 'mare', dest = Flecs) {
+		src = getpid(); //src = Davoli
+		nfasend(<'mare', 1>, Flecs);
+		num_sender[Davoli][Flecs]++; //ovvero = 2
+	}
+
+Flecs fa areceive da Libera
+	msg_t arecv(sender = Libera) {
+		p = getpid(); //p = Flecs
+		
+		if (messages[p = Flecs].size() > 0 && ...) // falso {...}
+				
+		(msg, num_mess) = nfarecv(sender = Libera);
+		//msg = '3', num_mess = 1
+		
+		while (num_mess != num_receiver[p = Flecs][sender = Libera]) //1 != 0 vero {
+			messages[p = Flecs].insert(msg = '3' , num_mess = 1 );
+			(msg, num_mess) = nfarecv(sender = Libera);
+			//msg = '4', num_mess = 2
+		} //secondo ciclo del while...
+		while (num_mess != num_receiver[p = Flecs][sender = Libera]) //2 != 0 vero {
+			messages[p = Flecs].insert(msg = '4' , num_mess = 2 );
+			(msg, num_mess) = nfarecv(sender = Libera);
+			//msg = '1', num_mess = 0
+		} //terzo ciclo del while 
+		while (num_mess != num_receiver[p = Flecs][sender = Libera]) //0 != 0 falso {...}
+
+		num_receiver[p = Flecs][sender = Libera]++; //ovvero 1 
+		return msg;	//msg = '1' corretto!
+	}
+
+Flecs fa areceive da Davoli
+	msg_t arecv(sender = Davoli) {
+		p = getpid(); //p = Flecs
+		
+		if (messages[p = Flecs].size() > 0 //vero
+			&& messages[p = Flecs].top() == num_receiver[p = Flecs][sender = Davoli]) //falso 1 != 0 {...}
+		
+		(msg, num_mess) = nfarecv(sender = Davoli);
+		//msg = 'ciao', num_mess = 0
+		
+		while (num_mess != num_receiver[p = Flecs][sender = Davoli]) //0 != 0 falso {...}
+
+		num_receiver[p = Flecs][sender = Davoli]++; //ovvero 1
+		return msg; //msg = 'ciao' corretto!
+
+	}
+
+Flecs fa areceive da Davoli
+	msg_t arecv(sender = Davoli) {
+		p = getpid(); //p = Flecs
+		
+		if (messages[p = Flecs].size() > 0 //vero
+			&& messages[p = Flecs].top() == num_receiver[p = Flecs][sender = Davoli]) //vero 1 == 1 {
+
+//ERRORE! io sto ricevendo da Davoli ma il top mi ha restituito 1 che era il messaggio da Libera!
+//			Non ho messo alcun messaggio da davoli in messages!
+
+			(msg, num_mess) = messages[p].removeTop(); //...
+			num_receiver[p][sender]++; //...
+			return msg;	//...
+		}
+
+	}
+
+
+
+

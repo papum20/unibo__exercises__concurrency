@@ -1,0 +1,67 @@
+semaphore mutex = semaphore(1)
+queue waiting_get = queue(NULL)
+queue waiting_put = queue(NULL)
+list of T put_value
+
+void put(T value)
+{
+    mutex.P()
+    if (!waiting_get.isEmpty())
+    {
+        semaphore s_get = waiting_get.dequeue()
+        put_value.add(value)
+        s_get.V
+        return
+    }
+    else
+    {
+        semaphore s_put = semaphore(0)
+        put_value.add(value)
+        waiting_put.enqueue(s_put)
+    }
+    mutex.V()
+    s_put.P()
+    free(s_put)
+    if (!waiting_put.isEmpty())
+    {
+        semaphore s = waiting_put.dequeue()
+        s.V()
+    }
+    else
+    {
+        mutex.V()
+    }
+}
+
+list of T get(void)
+{
+    mutex.P()
+    if (!waiting_put.isEmpty())
+    {
+        list of T l_put_value = put_value
+        put_value.clear()
+        semaphore s_put = waiting_put.dequeue()
+        s_put.V()
+        return l_put_value
+    }
+    else
+    {
+        semaphore s_get = semaphore(0)
+        waiting_get.enqueue(s_get)
+        s_get.P()
+        free(s_get)
+        list of T l_put_value = put_value
+        if (!waiting_get.isEmpty())
+        {
+            semaphore s = waiting_get.dequeue()
+            s.V
+            return l_put_value
+        }
+        else                                        //ultima get sbloccata, svuotiamo la lista per il prossimo "ciclo put/get"
+        {
+            put_value.clear()
+            mutex.V()
+            return l_put_value
+        }
+    }
+}

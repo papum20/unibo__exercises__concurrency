@@ -1,0 +1,34 @@
+shared boolean needp = false;
+shared boolean needq = false;
+shared int turn; 
+
+
+process P {
+ while (true) {
+ /* entry protocol */
+ needp = true;
+ turn = P;
+ while (needq && turn == Q); /* do nothing */
+
+ // enter critical section
+ needp = false;
+ turn = Q;
+ // exit non-critical section
+ }
+}
+
+
+
+process Q {
+ while (true) {
+ /* entry protocol */
+ needq = true;
+ turn = Q;
+ while (needp && turn == P); /* do nothing */
+
+ // enter critical section
+ needq = false;
+ turn = P;
+ // exit non-critical section
+ }
+}

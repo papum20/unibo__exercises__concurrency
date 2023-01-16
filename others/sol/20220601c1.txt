@@ -1,0 +1,50 @@
+Esercizio c.1: Scrivere il monitor delay che fornisce due procedure entry:
+int wait_tick(int nticks)
+void tick(void)
+La procedure entry tick è pensata per essere richiamata periodicamente (es. ogni secondo o ora o giorno) da un
+processo.
+Quando un processo chiama la wait_tick deve attendere un numero di chiamate della tick pari al parametro nticks.
+Per esempio se un processo chiama wait_tick(2) deve fermarsi e verrà riattivato alla seconda successiva chiamata di
+tick.
+La funzione wait_tick ha come valore di ritorno il numero di processi che erano bloccati al momento della tick che ha
+sbloccato il chiamante.
+Esempio: P chiama wait_tick(2) e si blocca. Q chiama wait_tick(3) e si blocca. T chiama tick() non succede nulla. R
+chiama wait_tick(2) e si blocca. T chiama tick(), viene sbloccata la wait_tick di P e il valore ritornato è 3. T chiama
+tick(), vengono sbloccate le wait_tick di Q e R e il valore ritornato per entrambi i processi è 2
+
+// SOLUZIONE PROPOSTA
+
+class MonitorDelay {
+    int curr_time;
+    int waiting_num;
+    heap<pair<int, condition>> waiting; // min heap con il tempo di sblocco dei processi;
+
+    void init() {
+        curr_time = 0;
+        waiting = heap<int>();
+    }
+
+    int entry wait_tick(int nticks) {
+        if (nticks <= 0) {
+            return waiting.size();
+        } else {
+            condition c = new condition();
+            waiting.insert(make_pair(nticks + curr_time, c));
+            c.wait();
+            free(c);
+        }
+        return waiting_num;
+    }
+
+
+    void entry tick(void) {
+        waiting_num = waiting.size();
+        curr_time++;
+
+        while (waiting.head().first <= curr_time) {
+            condition c = waiting.head().second;
+            waiting.deleteHead();
+            c.signal();
+        }
+    }
+}

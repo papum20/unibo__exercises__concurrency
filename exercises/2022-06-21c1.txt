@@ -1,0 +1,41 @@
+//hash_map<key,value>
+#define MAX_SKILL
+
+monitor collocamento {
+	hash_map<char*,int> ind;
+	int trovato_size[MAX_SKILL];
+	int richiesto_size[MAX_SKILL];
+	char *last_name;
+	condition trovato_skill[MAX_SKILL];
+	condition richiesto_skill[MAX_SKILL];
+
+	
+	collocamento() {
+		trovato_size = {0...0};
+		richiesto_size = {0...0};
+		last_name = "";
+		//assegna una qualsiasi corrispondenza tra skill (char*) e indici array di condition
+	}
+
+	void cercolavoro(char *nome, char *skill) {
+		int i = ind[skill];
+		if(richiesto_size[i] == 0)
+			richiesto_skill[i].wait();
+		last_name = nome;
+		trovato_size--;
+		richiesto_skill[i].signal();
+	}
+
+	void char *assumo(char *skill) {
+		int i = ind[skill];
+		if(trovato_size[i] > 0)
+			trovato_lavoro[i].signal();
+		else
+			richiesto_skill[i].wait();
+		//trovato lavoratore
+		richiesto_size[i]--;
+		return last_name;
+		}
+	}
+
+}

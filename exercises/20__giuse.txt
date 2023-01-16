@@ -1,0 +1,51 @@
+Dato un servizio di message passing asincrono implementare un servizio di message passing
+asincrono a selezione di mittenti (samp) senza fare uso di processi server.
+Il servizio samp ha due primitive:
+sasend(message , destination)
+sarecv(senders)
+dove senders è un insieme.
+la sarecv restituisce il primo messaggio che uno dei processi in senders ha spedito al processo ricevente
+usando la sasend (o spedito da qualsiasi processo se senders è vuoto).
+
+----
+
+//SOL1
+
+
+sasend(message, destination) {
+	asend(<getpid(), message>, destination);
+}
+
+sarecv(senders) {
+	<sender, msg> = arecv(ANY);
+	if(senders.size() == 0) return msg;
+	while(!(sender in senders)) {
+		asend(<sender, msg>, getpid());
+		<sender, msg> = arecv(ANY);
+	}
+	return msg;
+}
+
+
+
+//SOL2
+//piu efficiente con coda: evita di rileggere piu volte gli stessi messaggi rimandati a se stesso piu volte
+
+sasend(message, destination) {
+	asend(<getpid(), message>, destination);
+}
+
+sarecv(senders) {
+	queue<<sender,msg>> not_senders = new queue();
+	<sender, msg> = arecv(ANY);
+	if(senders.size() == 0) return msg;
+	while(!(sender in senders)) {
+		not_senders.enqueue(<sender,msg>);
+		<sender, msg> = arecv(ANY);
+	}
+	while(!not_senders.empty()) {
+		<s,m> = not_senders.dequeue();
+		asend(<s,m>, getpid();
+	}
+	return msg;
+}

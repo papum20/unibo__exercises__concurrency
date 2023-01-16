@@ -1,0 +1,382 @@
+https://etherpad.wikimedia.org/p/so2223.cs.unibo.it
+
+Lezione 07/12/22 MESSAGE PASSING
+
+dato un servizio di message passing asincrono FIFO: asend/arecv
+vogliamo fare un servizio di message passing asincrono LIFO: lasend larecv
+
+int n_processes;
+stack last[n_processes]; //uno stack per ogni mittente
+lasend(msg_t msg, pid q):
+  p = getpid();
+  asend(<msg, p>, q);
+
+//senza la gestione ANY!
+lareceive(pid q):
+  p = getpid();
+  asend(<'MYMESSAGE', p>, p); //automessaggio
+  //adesso dobbiamo fare un loop per ricevere tutti i messaggi
+  while (true)
+      <msg, mittente> = areceive(ANY);
+      if( msg == 'MYMESSAGE' && mittente == p)
+           break;
+      last[mittente].push(msg);
+
+  //adesso lo stack contiene tutti i messaggi ricevuti
+  while(last[q].isEmpty())
+    <msg, mittente> = areceive(ANY);
+    last[mittente].push(msg)
+  return last[q].pop();
+
+//mettiamo una struttura dati che gestisca lei la richiesta any e 'il gioco è fatto'
+
+--------------------------------------------------------------------------------------
+
+//aggiungiamo la gestione ANY!
+
+int n_processes;
+multistack mlast
+lasend(msg_t msg, pid q):
+  p = getpid();
+  asend(<msg, p>, q);
+
+lareceive(pid q):
+  p = getpid();
+  asend(<'MYMESSAGE', p>, p); //automessaggio
+  //adesso dobbiamo fare un loop per ricevere tutti i messaggi
+  while (true)
+      <msg, mittente> = areceive(ANY);
+      if( msg == 'MYMESSAGE' && mittente == p)
+           break;
+      mlast.add(msg,mittente);
+
+  //adesso lo stack contiene tutti i messaggi ricevuti
+  while((msg = mlast.get(q)) == NULL)
+    <msg, mittente> = areceive(ANY);
+    mlast.add(msg,mittente);
+  return msg
+  
+
+---------------------------------------------------------------------------------------
+
+dato message passing asincrono si può creare un message passing COMPLETAMENTE asincrono?
+
+areceive bloccante --> non bloccante, quando ha un messaggio è non bloccante.
+anche questo si risolve automandandoci un messaggio
+
+int n_processes;
+multistack mlast
+NBsend(msg_t msg, pid q):
+  p = getpid();
+  asend(<msg, p>, q);
+
+NBreceive(pid q):
+  p = getpid();
+  asend(<'MYMESSAGE', p>, p); //automessaggio
+  <msg, mittente> = areceive(ANY);
+  
+  while <msg, mittente> != <'MYMESSAGE', p>:
+      mlast.add(msg, mittente);
+      <msg, mittente> = areceive(ANY)
+return mlast.get(q);  // get consuma il messaggio,  e ritorna NULL se non c'è.
+
+---------------------------------------------------------------------------------------
+esercizio per casa:
+Producer consumer con message passing asincrono senza avere un processo ulteriore (server). È possibile?
+
+| producer |---------------- elemento di scambio --------------| consumer |
+
+//Il problema: buffer ILLIMITATO!
+producer
+   while True:
+      m = produce()
+      asend(m, consumer)
+
+consumer
+   while True:
+      m = arecv(producer)
+      consume(m)
+
+----
+
+Primo tentativo di soluzione:
+//questo ferma già il primo, non mi è consentito produrre anche il secondo
+//equivale al message passing sincrono con ack mandato 'prima'
+producer
+   while True:
+      m = produce()
+      msg = arecv(consumer) 
+      if (msg == 'OK')
+         asend(m, consumer)
+
+consumer
+   while True:
+       asend (OK, producer)
+       m = arecv(producer)
+       consume(m)
+
+-----
+
+Secondo tentativo di soluzione:
+int MAX = 2; //se fosse 5 sarebbe un buffer a 5 elementi
+//il consumer può accumulare fino a 5 ack
+producer
+   // static ha la persistenza di una variabile globale, ma è vista solo localmente.
+   static int n = 0;  
+   while True:
+      m = produce()
+      if (n < MAX)
+         n++
+      else  
+         // se ho già mandato molti valori prodotti, aspetto 
+         // che il consumer li abbia ricevuti e che mi abbia risposto
+         arecv(consumer)
+      asend(m, consumer)
+//ricorda il token ring (di reti)      
+
+consumer
+   while True:
+      m = arecv(producer)
+      asend(ACK, producer)
+      consume(m)
+
+MONITOR
+
+// http://www.cs.unibo.it/~renzo/so/compiti/2018.02.12.tot.pdf
+/*12 febbraio 2018
+Esercizio c.1: L'incrocio fra una strada e un canale è regolato da un ponte mobile come quello illustrato
+dall'apposito segnale.
+Ovviamente le auto possono attraversare il ponte solo se è abbassato e si può alzare il ponte se non ci sono
+auto che lo stanno attraversando. Il ponte deve essere alzato per far passare le imbarcazioni.
+Il canale in corrispondenza del ponte ha una larghezza che consente il passaggio contemporaneo di due
+imbarcazioni, una per ogni senso di percorrenza, il ponte ha la portata massima di MAXCAR autoveicoli.
+Le auto per attraversare il ponte usano il seguente protocollo:
+ bridge.car_enter(direction)
+ ... attraversa il ponte
+ bridge.car_exit(direction)
+Le imbarcazioni usano il protocollo:
+ bridge.boat_enter(direction)
+ ... passa sotto al ponte
+ bridge.boat_exit(direction)
+dove direction vale 0 o 1 per riconoscere le due diverse direzioni delle auto o delle imbarcazioni.
+Occorre scrivere la soluzione in modo da evitare casi di starvation.
+*/
+
+/*
+SUPPONGO CHE: se due barche devono attraversare partendo dalla stessa direzione
+allora passano comunque una alla volta.
+Ovviamente si può abbassare il ponte se non ci sono barche che attraversano sotto.
+
+assumo che le macchine si possano superare tra loro una volta sul ponte...
+...quindi MAXCAR sia riferito alla somma di quelle attraversanti in entrambe le direzioni
+*/
+
+
+#define CAR_CAN_GO() ( abbassato == True && (car_attraversanti[0] + car_attraversanti[1]) < MAXCAR )
+#define BOAT_CAN_GO(direction) ( abbassato == False && boat_attraversanti[direction] == 0 )
+//NOTA: visto che le barche hanno condizioni diverse in base alla direzione devo mettere la macro dipendente dalla direzione
+
+#define NO_CAR_UP() ( car_attraversanti[0] == 0 && car_attraversanti[1] == 0 )
+#define NO_BOAT_DOWN() ( boat_attraversanti[0] == 0 && boat_attraversanti[1] == 0 )
+
+const int MAXCAR = ...? ; //il ponte ha la portata massima di MAXCAR autoveicoli.
+const int DIRECTION = 2 ;
+
+monitor bridge {
+        bool abbassato;
+        int car_attraversanti[DIRECTION];
+        int boat_attraversanti[DIRECTION];
+        condition okToCar[DIRECTION];                //CAR_CAN_GO() == True
+        condition okToBoat[DIRECTION];                //BOAT_CAN_GO() == True
+
+        //per evitare starvation devo contare le auto e le barche in attesa
+        int waiting_car;                                 //auto in attesa in entrambe le direzioni
+        int waiting_boat;                                        //barche in attesa in entrambe le direzioni
+
+        bridge(bool start_car){                                //se start_car == True allora inizializzo abbassato = True; False altrimenti
+                waiting_car = 0;
+                waiting_boat = 0;
+                abbassato = start_car;
+                for(int i = 0; i < DIRECTION; i++) {
+                        car_attraversanti[i] = 0;
+                        boat_attraversanti[i] = 0;
+                }
+        }
+
+        procedure entry car_enter(int direction) {
+
+                if( abbassato == False && NO_BOAT_DOWN() )        //se il ponte è alzato e non ci sono barche sotto
+                        abbassato = True;                                                //posso abbassarlo
+
+                if( ! CAR_CAN_GO() || waiting_boat > 0) {        //attendo anche se c'è una barca in attesa                
+                        waiting_car ++;
+                        okToCar[direction].wait();
+                        waiting_car --;
+                }
+
+                car_attraversanti[direction] ++;
+        }
+        procedure entry car_exit(int direction) {
+
+                car_attraversanti[direction] --;
+
+                if( waiting_boat > 0 && NO_CAR_UP() ) {
+                        abbassato = False;                        //alzo il ponte, per far passare le barche
+
+                        if( BOAT_CAN_GO(direction) ) {                //se posso sblocco le barche in entrambe le direzioni
+                                okToBoat[0].signal();
+                                okToBoat[1].signal();
+                        }
+                        if( NO_BOAT_DOWN() )
+                                abbassato = True;                //abbasso il ponte, per far passare le auto
+                }
+
+                if( CAR_CAN_GO() && waiting_boat == 0 )
+                        okToCar[direction].signal();        //sblocco solo l'auto dietro di me
+        }
+
+        procedure entry boat_enter(int direction) {
+
+                if( abbassato == True && NO_CAR_UP() )                //se il ponte è abbassato e non ci sono auto sopra
+                        abbassato = False;                                                //posso alzarlo
+
+                if( ! BOAT_CAN_GO(direction) || waiting_car > 0 ) {        //aspettiamo anche se ci sono auto in attesa
+                        waiting_boat ++;
+                        okToBoat[direction].wait();
+                        waiting_boat --;
+                }
+
+                boat_attraversanti[direction] ++;
+        }
+        procedure entry boat_exit(int direction) {
+
+                boat_attraversanti[direction] --;
+
+                if( waiting_car > 0 && NO_BOAT_DOWN() ) {
+                        abbassato = True;                        //abbasso il ponte, per far passare le auto
+
+                        if( CAR_CAN_GO() ) {                //se posso sblocco le auto in entrambe le direzioni
+                                okToCar[0].signal();
+                                okToCar[1].signal();
+                        }
+
+                        if( NO_CAR_UP() )
+                                abbassato = False;                //alzo il ponte, per far passare le barche
+                }
+
+                if( BOAT_CAN_GO(direction) && waiting_car == 0)
+                        okToBoat[direction].signal();        //sblocco solo la barca dietro di me
+        }
+}
+
+/*
+edit del prof (discusso a lezione): 
+1. le auto non ci interessa la direzione quindi facciamo un unica waiting per le auto. Di conseguenze il parametro direction in car_enter(direction) e car_exit(direction) non sarà di fatto usato (posso scrivere un commento per dire so che non lo sto usando perché non mi interessa la direzione, è un parametro in più).
+2. nella car_enter if( CAR_CAN_GO ) _.signal(); per sbloccare fino a MAXCAR auto e non solo due
+*/
+
+--------------------------------------------------------------
+
+Esercizio c1 esame 20/07/2022
+
+monitor porto {
+        int nrNaviAttraccate;
+        int nrCamionScaricanti;
+        float capacitàRimanente;           //Capacità rimanente della nave che in questo momento è attraccata (può esserci al più una nave attraccata alla volta)
+        float quantitàDaScaricare;         //Quantità ancora da scaricare del camion in porto che aveva già iniziato a scaricare (può esserci al più un camion che sta scaricando alla volta) 
+
+        cond okSalpa;                      //capacitàRimanente == 0
+        cond okAttracca;                   //nrNaviAttraccate == 0
+        cond okIniziaScaricamento;         //nrCamionScaricanti == 0 && capacitàRimanente > 0 && nrNaviAttraccate == 1       //I motivi di queste condizioni sono spiegati in "scarica()"
+        cond okContinuaAScaricare;         //nrNaviAttraccate == 1 && capacitàRimanente > 0
+
+        porto() {
+                nrNaviAttraccate = 0;
+                nrCamionScaricanti = 0;
+                capacitàRimanente = 0;
+                quantitàDaScaricare = 0;
+        }
+
+        procedure entry attracca(float capacità) {
+                if (nrNaviAttraccate == 1) {
+                        okAttracca.wait();
+                }
+                nrNaviAttraccate = 1;
+                capacitàRimanente = capacità;
+                if (nrCamionScaricanti == 0 && capacitàRimanente > 0 && nrNaviAttraccate == 1) {  //seconda condizione e terza condizione ovvie
+                        okIniziaScaricamento.signal();
+                }
+                if (capacitàRimanente > 0 && nrNaviAttraccate == 1) {
+                        //Ora il camion che aveva già iniziato a scaricare potrà scaricare altri cereali.
+                        okContinuaAScaricare.signal();
+                }                
+        }
+
+        procedure entry salpa() {
+                if (capacitàRimanente > 0) {
+                        okSalpa.wait();
+                }
+                nrNaviAttraccate = 0;
+                okAttracca.signal();    //Se c'è una nave che stava aspettando per attraccare, ora sicuramente potrà farlo.
+        }
+
+        procedure entry scarica(float quantità) {
+                //Motivo della condizione "capacitàRimanente == 0": se non inserisco questa condizione, il camion potrebbe tentare
+                //di scaricare altri cereali nella nave piena, che in quel momento potrebbe non essere ancora salpata. Una volta salpata,
+                //potrà attraccare una nuova nave. Quest'ultima avrà sicuramente capacità maggiore di 0.
+                
+                //Motivo della condizione "nrNaviAttraccate == 0": il camion non può scaricare se non c'è alcuna nave attraccata. Solo una nave attraccata
+                //può accettare del carico.
+                if (nrCamionScaricanti == 1 || capacitàRimanente == 0 || nrNaviAttraccate == 0) {
+                        okIniziaScaricamento.wait()
+                }
+                
+                //Inizio a scaricare: ora gli altri camion che arriveranno in porto dovranno attendere in coda.
+                nrCamionScaricanti = 1;
+
+                quantitàDaScaricare = quantità;
+
+                //Continuo a scaricare i cereali finchè non li ho scaricati tutti.
+                while (quantitàDaScaricare > 0) {
+                        //Controllo di poter continuare a scaricare altri cereali. I motivi di queste due condizioni sono gli stessi descritti precedentemente.
+                        if (capacitàRimanente == 0 || nrNaviAttraccate == 0) {
+                                okContinuaAScaricare.wait()
+                        }
+                        
+                        //Se la nave è in grado di accettare tutto il mio carico...
+                        if (capacitàRimanente - quantitàDaScaricare >= 0) {
+                                //...allora riempio completamente la nave: ora non ho più cereali da scaricare!
+                                capacitàRimanente -= quantitàDaScaricare;
+                                quantitàDaScaricare = 0;
+                        //Altrimenti, se la nave non è in grado di accettare tutto il mio carico...
+                        } else {
+                                //...allora riempio completamente la nave, ma ho ancora altri cereali da scaricare!
+                                quantitàDaScaricare -= capacitàRimanente;
+                                capacitàRimanente = 0;
+                        }
+
+                        
+                        if (capacitàRimanente == 0) {
+                                //Ora la nave è completamente carica: può finalmente salpare!
+                                okSalpa.signal();
+                        }
+                }
+
+                //Ho finito di scaricare: ora potrà iniziare a scaricare un altro camion!
+                nrCamionScaricanti = 0;
+
+                if (nrCamionScaricanti == 0 && capacitàRimanente > 0 && nrNaviAttraccate == 1) {
+                        okIniziaScaricamento.signal();
+                }
+        }
+        
+}
+
+
+
+
+
+
+
+
+

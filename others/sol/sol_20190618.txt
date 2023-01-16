@@ -1,0 +1,94 @@
+// CONSEGNA
+class semaphore {
+    int value;
+    int blocked = 0;
+    binary_semaphore mutex(1);
+    binary_semaphore sem(0);
+
+void init(int initval) {
+    value = initval;
+}
+
+void P() {
+    mutex.P();
+    if (value == 0) {
+        blocked++;
+        mutex.V();
+        sem.P();
+        blocked--;
+    }
+    value--;
+    mutex.V();
+}
+
+void V() {
+    mutex.P();
+    value++;
+    if (blocked > 0)
+        sem.V();
+    else
+        mutex.V();
+}
+} // class semaphore
+
+In questa implementazione di semafori generali dati semafori ordinari:
+a) viene usata la tecnica di passaggio del testimone (passing le batôn), spiegare come è usata e quale effetto ha.
+b) questa implementazione non garantisce la FIFONESS di riattivazione dei processi bloccati, mostrare perché.
+c) modificare il codice, mantenendone la struttura, per ottenere una soluzione che risolva il problema del punto 2.
+// FINE CONSEGNA
+
+
+// SOLUZIONE PROPOSTA
+a. viene utilizzato il passaggio del testimone da V() a P(), infatti nel caso in cui blocked > 0, il mutex non viene
+rilasciato in V(), ma viene passato a P(), che riprende dall'istruzione `sem.P()` e rilascia alla fine il mutex.
+Questa tecnica permette di passare il mutex in modo implicito, è come se la sezione critica creata dal mutex
+si espandesse su due thread differenti.
+
+b. se si suppone che il binary_semaphore abbia una coda interna per garantire una FIFONESS interna, allora questa è
+sufficiente, contrariamente a quanto suggerito dalla consegna, a garantire FINONESS all'intera classe semaphore, dato che
+i processi bloccati sono tutti bloccati sullo stesso semaforo sem, quindi saranno riattivati rispetto l'ordine della queue
+quando sarà chiamato sem.V()
+
+Quindi supponiamo che binary_semaphore non possieda questa queue interna, allora non abbiamo nessuna garanzia di FIFONESS
+Però possiamo andare a  implementare questa queue esternamente a binary_semaphore, come sotto.
+
+c.
+class semaphore {
+    int value;
+    int blocked = 0;
+    binary_semaphore mutex(1);
+    queue<binary_semaphore> semqueue;
+
+void init(int initval) {
+    value = initval;
+}
+
+void P() {
+    mutex.P();
+    // blocked non ci serve più perché 
+    // abbiamo la dimensione della semqueue
+    // utile a contare il numero di processi bloccati.
+    if (value == 0) {
+        binary_semaphore sem = new binary_semaphore(0);
+        semqueue.enqueue(sem);
+        mutex.V();
+        sem.P();
+    }
+    value--;
+    mutex.V();
+}
+
+void V() {
+    mutex.P();
+    value++;
+    if (semqueue.size() > 0) {
+        binary_semaphore sem = semqueue.dequeue(); // togli e ritorna il primo nella queue.
+        sem.V();
+    } else { 
+        mutex.V();
+    }
+}
+
+} // class semaphore
+
+

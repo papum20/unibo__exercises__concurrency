@@ -1,0 +1,368 @@
+Esercizio c.2: Un servizio viene fornito in modalità client-server usando message passing asincrono.
+Al fine di aumentare l'efficienza si decide di usare molti server e un processo dispatcher in grado di distribuire le
+richieste agli N server. Quando un processo server è libero riceve dal dispatcher la prossima richiesta da elaborare:
+codice di ogni client (tanti!): .....
+asend(<getpid(), request>, dispatcher)
+result = arecv(dispatcher)
+server process[i], i = 0, ..., N-1:
+ request = arecv(dispatcher)
+ result = compute(request)
+ asend(<getpid(), result>, dispatcher)
+Scrivere il processo dispatcher. (il dispatcher conosce i pid di tutti i server).
+ 
+Soluzione proposta sotto:
+ 
+extern int N;
+process dispatcher() {
+    // indice che tiene conto a quale server dover mandare
+    // per semplicità supponiamo che i server abbiano PID
+    // da 0 a N - 1
+    int i = 0; 
+ 
+    // mappa server a pid del processo che lo ha richiesto.
+    // chiave: pid del server
+    // value: queue richiesta dispatchata al server in chiave
+    map<int, queue<int>> mapper; 
+    while (true) {
+        res = arecv(ANY);
+        // NOTA: questa soluzione è sbagliata perché non manda
+        // quando il server è libero! ma manda a round-robin a tutti 
+        // i server.
+        
+        // in questa parte l'importante è sapere
+        // se la richiesta proviene dal  server o da un altro
+        // processo, ho assunto che la disambiguazione 
+        // fosse immediata, un altro modo per checkare questo
+        // è vedere se il PID del messaggio rientri fra quelli
+        // noti al dispatcher.
+        if (<pid, request> = res) {
+            mapper[i].enqueue(pid);
+            asend(request, i /*il i-esimo server*/);
+            i++;
+            i %= N;
+        } else if (<pid, response> = res) {
+            requester_pid = mapper[pid].dequeue();
+            asend(response, requester_pid);
+        }
+    }
+}
+//ciclicamente manda le richieste,
+nota: questa soluzine non tiene conto che le richieste possano impiegare tempi diversi, quindi se la prima è molto pesante le altre dopo la N (circolare) non è efficente.
+ 
+Seconda Soluzione proposta sotto:
+ 
+extern int N;
+process dispatcher() {
+    // indice che tiene conto a quale server dover mandare
+    // per semplicità supponiamo che i server abbiano PID
+    // da 0 a N - 1
+ 
+    // mappa server a pid del processo che lo ha richiesto.
+    // chiave: pid del server
+    // value: queue richiesta dispatchata al server in chiave
+    map<int, int> mapper; 
+    bool free[N];   // se il server è libero o meno.
+    queue<pid, request> requests;
+    while (true) {
+        <pid, msg> = arecv(ANY);
+        
+        serverindex = 0;
+        for (i = 0; i < N; i++)
+            if (pid == server[i])
+                  break
+        if (serverindex >= N)
+        {
+            request = msg
+            for (i = 0; i < N; i++) {
+                 if (free[i]) {
+                      free[i] = false;
+                       mapper[i] = pid;
+                       asend(request, server[i] /*server da mandare*/);     
+                       break;
+                }
+            }
+            if (i == N) {
+                  requests.enqueue(<pid, request>);    
+            }
+            
+        } else {
+            response = msg;
+            requester_pid = mapper[serverindex];
+            asend(response, requester_pid);
+            
+            if (requests.size() > 0) {
+                   <pid_process, request> = requests.dequeue();
+                   asend(request, server[serverindex]);
+                   mapper[pid] = pid_process;
+             } else {
+                  free[pid] = true;
+            }
+        }
+    }
+}
+
+-----------------------
+
+// http://www.cs.unibo.it/~renzo/so/compiti/2018.02.12.tot.pdf
+/*12 febbraio 2018
+Esercizio c.1: L'incrocio fra una strada e un canale è regolato da un ponte mobile come quello illustrato
+dall'apposito segnale.
+Ovviamente le auto possono attraversare il ponte solo se è abbassato e si può alzare il ponte se non ci sono
+auto che lo stanno attraversando. Il ponte deve essere alzato per far passare le imbarcazioni.
+Il canale in corrispondenza del ponte ha una larghezza che consente il passaggio contemporaneo di due
+imbarcazioni, una per ogni senso di percorrenza, il ponte ha la portata massima di MAXCAR autoveicoli.
+Le auto per attraversare il ponte usano il seguente protocollo:
+ bridge.car_enter(direction)
+ ... attraversa il ponte
+ bridge.car_exit(direction)
+Le imbarcazioni usano il protocollo:
+ bridge.boat_enter(direction)
+ ... passa sotto al ponte
+ bridge.boat_exit(direction)
+dove direction vale 0 o 1 per riconoscere le due diverse direzioni delle auto o delle imbarcazioni.
+Occorre scrivere la soluzione in modo da evitare casi di starvation.
+*/
+
+/*
+SUPPONGO CHE: se due barche devono attraversare partendo dalla stessa direzione
+allora passano comunque una alla volta.
+Ovviamente si può abbassare il ponte se non ci sono barche che attraversano sotto.
+
+assumo che le macchine si possano superare tra loro una volta sul ponte...
+...quindi MAXCAR sia riferito alla somma di quelle attraversanti in entrambe le direzioni
+*/
+
+
+#define CAR_CAN_GO() ( abbassato == True && car_attraversanti < MAXCAR )
+#define BOAT_CAN_GO(direction) ( abbassato == False && boat_attraversanti[direction] == 0 )
+//NOTA: visto che le barche hanno condizioni diverse in base alla direzione devo mettere la macro dipendente dalla direzione
+
+#define NO_CAR_UP() ( car_attraversanti == 0 )
+#define NO_BOAT_DOWN() ( boat_attraversanti[0] == 0 && boat_attraversanti[1] == 0 )
+
+const int MAXCAR = ...? ; //il ponte ha la portata massima di MAXCAR autoveicoli.
+const int DIRECTION = 2 ;
+
+monitor bridge {
+        bool abbassato;
+        int car_attraversanti;        //non mi interessa la direzione per le auto
+        int boat_attraversanti[DIRECTION];
+        condition okToCar;                //CAR_CAN_GO() == True
+        condition okToBoat[DIRECTION];                //BOAT_CAN_GO() == True
+
+        //per evitare starvation devo contare le auto e le barche in attesa
+        int waiting_car;                                        //auto in attesa in entrambe le direzioni
+        int waiting_boat;                                        //barche in attesa in entrambe le direzioni
+
+        bridge(bool start_car){                                //se start_car == True allora inizializzo abbassato = True; False altrimenti
+                waiting_car = 0;
+                waiting_boat = 0;
+                abbassato = start_car;
+                car_attraversanti = 0;
+                boat_attraversanti[0] = 0;
+                boat_attraversanti[1] = 0;
+        }
+
+        procedure entry car_enter(int direction) {
+                //nota: non ci interessa la direzione delle auto quindi direction non verrà usato
+
+                if( abbassato == False && NO_BOAT_DOWN() )        //se il ponte è alzato e non ci sono barche sotto
+                        abbassato = True;                                                //posso abbassarlo
+
+                if( ! CAR_CAN_GO() || waiting_boat > 0) {        //attendo anche se c'è una barca in attesa                
+                        waiting_car ++;
+                        okToCar.wait();
+                        waiting_car --;
+                }
+
+                car_attraversanti ++;
+
+                /*NOTA BENE: se posso sblocco l'auto dietro di me,
+                in questo modo 'dopo che è passata una barca'
+                posso sfruttare MAXCAR auto sul ponte e non solo 1
+                (o 2 nel caso si tenesse conto della direzione della macchina)
+                al risveglio da boat_exit ...o da car_exit*/
+
+                if( CAR_CAN_GO()  ) //se posso risveglio altre in cascata
+                                    //NON SERVE && waiting_boat == 0
+                        okToCar.signal();        //sblocco un altra auto indipendentemente dalla sua direzione
+        }
+        procedure entry car_exit(int direction) {
+                //nota: non ci interessa la direzione delle auto quindi direction non verrà usato
+
+                car_attraversanti --;
+
+                if( waiting_boat > 0 && NO_CAR_UP() ) {
+                        abbassato = False;                        //alzo il ponte, per far passare le barche
+
+                        //sblocco le barche in entrambe le direzioni
+                        //sono sicurə che abbassato sia False perchè l'ho appena assegnato false
+                        //sono sicurə che non ci siano barche attraversanti perchè sta uscendo una macchina
+                        okToBoat[0].signal();
+                        okToBoat[1].signal();
+
+                        if( NO_BOAT_DOWN() )
+                                abbassato = True;                //abbasso il ponte, per far passare le auto
+                }
+
+                if( CAR_CAN_GO()  ) // NON SERV && waiting_boat == 0
+                        okToCar.signal();        //sblocco una sola auto indipendentemente dalla direzione
+        }
+
+        procedure entry boat_enter(int direction) {
+
+                if( abbassato == True && NO_CAR_UP() )                //se il ponte è abbassato e non ci sono auto sopra
+                        abbassato = False;                                                //posso alzarlo
+
+                if( ! BOAT_CAN_GO(direction) || waiting_car > 0 ) {        //aspettiamo anche se ci sono auto in attesa
+                        waiting_boat ++;
+                        okToBoat[direction].wait();
+                        waiting_boat --;
+                }
+
+                boat_attraversanti[direction] ++;
+        }
+        procedure entry boat_exit(int direction) {
+
+                boat_attraversanti[direction] --;
+
+                if( waiting_car > 0 && NO_BOAT_DOWN() ) {
+                        abbassato = True;                        //abbasso il ponte, per far passare le auto
+
+                        if( CAR_CAN_GO() ) {                //se posso sblocco un auto in una delle due direzioni
+                                okToCar.signal();                //che sbloccherà nella car_enter altre in catena
+                        }
+
+                        if( NO_CAR_UP() )
+                                abbassato = False;                //alzo il ponte, per far passare le barche
+                }
+
+                if( BOAT_CAN_GO(direction) && waiting_car == 0)
+                        okToBoat[direction].signal();        //sblocco solo la barca dietro di me
+        }
+}
+
+
+---------------------------------------------------
+
+http://www.cs.unibo.it/~renzo/so/compiti/2022.06.01.tot.pdf
+
+Esercizio c.2: Un servizio di message passing asincrono non fifo (nfasend/nfarecv) consegna in tempo finito tutti i
+messaggi spediti ma non è garantito che i messaggi vengano ricevuti nell'ordine nel quale sono stati spediti.
+void nfasend(msg_t msg, pid_t dest)
+msg_t nfarecv(pid_t sender)
+Dato un servizio di message passing asincrono non fifo scrivere una libreria che implementi il servizio di message
+passing asincrono fifo:
+void asend(msg_t msg, pid_t dest)
+msg_t arecv(pid_t sender)
+Nota: sia il servizio dato (non fifo) sia quello da implementare (fifo) consentono la ricezione solo da mittente specificato
+(non supportano ANY/*).
+
+// SOLUZIONE PROPOSTA
+
+void nfasend(msg_t msg, pid_t dest);
+msg_t nfarecv(pid_t sender);
+
+
+// array di grandezza di massimi numero di processi, inizializzato a 0
+// utilizzato per contare il numero di messaggi inviati da un certo process
+// a un certo processo.
+int num_sender[MAX_PROC][MAX_PROC];
+void asend(msg_t msg, pid_t dest) {
+        src = getpid();
+        nfasend(<msg, num_send[src][dest]>, dest);
+        num_sender[src][dest]++;
+}
+
+// molto simile a num_sender, ma è utilizzato per contare il numero di messaggi
+// ricevuti, in ordine.
+int num_receiver[MAX_PROC][MAX_PROC];
+// array bidimensionale heap ordinato sul int (per ogni heap in cima c'è il messaggio col minimo int).
+//il primo indice indica il receiver, il secondo indice indica il sender
+min_heap<msg, int> messages[MAX_PROC][MAX_PROC];
+msg_t arecv(pid_t sender) {
+        p = getpid();
+        
+        if (messages[p][sender].size() > 0 && messages[p][sender].top() == num_receiver[p][sender]) {
+                (msg, num_mess) = messages[p][sender].removeTop();
+                num_receiver[p][sender]++;
+                return msg;
+        }
+
+        (msg, num_mess) = nfarecv(sender);
+
+        while (num_mess != num_receiver[p][sender]) {
+                messages[p][sender].insert(msg, num_mess);
+                (msg, num_mess) = nfarecv(sender);
+        }
+
+        num_receiver[p][sender]++;
+        return msg;        
+}
+
+//nota spreco memoria per la matrice ... inutile ma accedo solo alla mia riga
+
+-------------
+
+http://www.cs.unibo.it/~renzo/so/compiti/2022.06.01.tot.pdf
+
+Esercizio c.2: Un servizio di message passing asincrono non fifo (nfasend/nfarecv) consegna in tempo finito tutti i
+messaggi spediti ma non è garantito che i messaggi vengano ricevuti nell'ordine nel quale sono stati spediti.
+void nfasend(msg_t msg, pid_t dest)
+msg_t nfarecv(pid_t sender)
+Dato un servizio di message passing asincrono non fifo scrivere una libreria che implementi il servizio di message
+passing asincrono fifo:
+void asend(msg_t msg, pid_t dest)
+msg_t arecv(pid_t sender)
+Nota: sia il servizio dato (non fifo) sia quello da implementare (fifo) consentono la ricezione solo da mittente specificato
+(non supportano ANY/*).
+
+// SOLUZIONE PROPOSTA
+
+void nfasend(msg_t msg, pid_t dest);
+msg_t nfarecv(pid_t sender);
+
+
+// array di grandezza di massimi numero di processi, inizializzato a 0
+// utilizzato per contare il numero di messaggi inviati a un certo processo.
+int num_sender[MAX_PROC];
+
+//RICORDA che ogni sender ha il suo num_sender[...]
+
+void asend(msg_t msg, pid_t dest) {
+        src = getpid();
+        nfasend(<msg, num_send[dest]>, dest);
+        num_sender[dest]++;
+}
+
+// molto simile a num_sender, ma è utilizzato per contare il numero di messaggi ricevuti, in ordine.
+int num_receiver[MAX_PROC];
+// array heap ordinato sul int (per ogni heap in cima c'è il messaggio col minimo int).
+min_heap<msg, int> messages[MAX_PROC];
+
+//RICORDA che ogni receiver ha il suo proprio num_receiver[...] e messages[...]
+
+msg_t arecv(pid_t sender) {
+        p = getpid();
+        
+        if (messages[sender].size() > 0 && messages[sender].top().num_mess == num_receiver[sender]) {
+                (msg, num_mess) = messages[sender].removeTop();
+                num_receiver[sender]++;
+                return msg;
+        }
+
+        (msg, num_mess) = nfarecv(sender);
+
+        while (num_mess != num_receiver[sender]) {
+                messages[sender].insert(msg, num_mess);
+                (msg, num_mess) = nfarecv(sender);
+        }
+
+        num_receiver[sender]++;
+        return msg;        
+}
+
+//corretto
+
+
+

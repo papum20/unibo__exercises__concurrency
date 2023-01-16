@@ -1,0 +1,47 @@
+//http://www.cs.unibo.it/~renzo/so/compiti/2017.09.11.tot.pdf
+/* 11 settembre 2017
+Esercizio c.1: Un semaforo intelligente controlla un incrocio al quale si può accedere da 4 direzioni N, E, S, W. Un solo veicolo alla
+volta deve occupare l’area dell’incrocio. Se sono presenti veicoli da tutte le direzioni, il semaforo fa avanzare ciclicamente un veicolo
+da ogni direzione (NESWNESWNESW…). Se nessun veicolo è in attesa da una direzione, il turno viene saltato.
+Quella che segue è la porzione di di programma eseguita dai veicoli per passare attraverso l’incrocio:
+ crossing.enter(direction)
+ …critical section
+ crossing.exit(direction)
+Nonostante sia un semaforo, questo esercizio deve venir risolto coi monitor.
+*/
+
+const int N_DIRECTION = 4;							//NESW
+
+monitor crossing {
+	bool free;										//l'incrocio è libero?
+	condition okToCross[N_DIRECTION];				//free == True
+	
+	crossing() {
+		free = True;								//parto con l'incrocio libero
+	}
+
+	procedure entry enter(int direction) {
+		if(!free) {									//se l'incrocio non è libero
+			okToCross[direction].wait();			//aspetto nella mia direzione
+		}
+													//ora sono sicurə che sia libero
+		free = False;								//quindi lo dichiaro occupato
+	}
+
+	procedure entry exit(int direction) {
+													//non devo aspettare niente per liberare l'incrocio
+		free = True;								//lo dichiaro libero
+		int precedenza;								//attuale precedenza
+
+		for(int i = 0; i < N_DIRECTION; i++) {		//per i da 0 a N_DIRECTION
+
+			//mi calcolo quale direzione ha la precedenza seguendo l'ordine NESW
+			precedenza = (i + (N_DIRECTION - 1)) % N_DIRECTION;
+
+			if(precedenza == direction)				//se è la direzione con la 'precedenza'
+				okToCross[precedenza].signal();		//sblocco quella direzione
+		}
+	}
+}
+
+

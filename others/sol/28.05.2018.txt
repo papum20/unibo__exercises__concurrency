@@ -1,0 +1,44 @@
+20.05.2018
+
+La struttura di sincronizzazione riempisvuota ha le seguenti caratteristiche:
+-) entrano MAX processi, e fino a che non è piena nessun processo può uscire
+-) i processi devono uscire in ordine inverso rispetto all'ordine di arrivo.
+Quando un processo vuole usare la struttura riempisvuota chiama la seguente funzione:
+ def riempisvuotasynch():
+ riempisvuota.entra(getpid())
+ riempisvuola.esci(getpid())
+Scrivere il monitor riempisvuota.
+
+
+#define MAX
+monitor Riempisvuota{
+int MAX;
+int count = 0;
+condition ok2enter;
+condition[MAX] ok2esc;
+
+procedure entry void enter(getpid()){
+if (count == MAX){
+ok2enter.wait();
+}
+int id = getpid();
+count++;
+if (count == MAX){
+for (int i = MAX - 1; i >= 0; i--){
+ok2esc[i].signal();
+}
+}
+}
+
+procedure entry void esc(getpid()){
+int id = getpid();
+if (count < MAX){
+ok2esc[id].wait();
+}
+count--;
+if (count == 0){
+ok2enter.signal();
+}
+}
+
+}

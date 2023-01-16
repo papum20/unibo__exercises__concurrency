@@ -1,0 +1,61 @@
+/*
+Esercizio c.1: Scopo di questo esercizio e' di scrivere un monitor mbuf che realizzi un buffer limitato dove ogni elemento
+venga inserito con una molteplicita'. In particolare mbuf deve fornire le seguenti procedure entry:
+void add(type data, int n);
+che inserisce il dato data con molteplicita' n.
+type get(void);
+che restituisce il primo dato disponibile.
+Il monitor deve soddisfare i seguenti vincoli:
+  -il buffer deve contenere al piu' MAXELEM elementi (ogni operazione add aggiunge un elemento
+   indipendentemente dalla molteplicita' n)
+  -i dati vengono consegnati in ordine FIFO
+  -un dato inserito con molteplicita' n deve essere ricevuto da n processi: il monitor deve attendere che n processi
+   chiamino (o abbiano chiamato) la get e a quel punto restituisce il dato a tutti e toglie l'elemento dal buffer.
+
+Assunzioni:
+1- Non vengono aggiunti dati con molteplicita' 0 perche' verrebbero eliminati immediatamente (visto che devono aspettare 0 processi)
+2- Nel testo non e' specificato come gestire eventuali get chiamate prima che vengano aggiunti degli elementi nel buffer. 
+Assumo che quindi non si verifichi.
+*/
+
+monitor mbuf{
+    Queue data_queue;       
+    Queue molteplicity_queue;                   //where the molteplicity for the data is stored
+    int get_counter;                            //counts the processes waiting to get the data
+    condition full_queue;                       //if the buffer is full
+    condition molteplicity_reached;             //get_counter == molteplicity_queue.top()
+
+    
+    monitor mbuf(int MAXELEM){
+        data_queue = new Queue(MAXELEM);
+        molteplicity_queue = new Queue(MAXELEM);
+        get_counter = 0;
+    }
+
+    entry void add (type data, int n){
+        if (data_queue.isFull())
+            full_queue.wait();
+        data_queue.add(data);
+        molteplicity_queue.add(n);
+    }
+
+    entry type get (){
+        type data;
+        get_counter++;                                  //increase the number of the processes waiting
+        if (get_counter < molteplicity_queue.top())     //if the number of processes required by the data at the top is not yet reached, wait
+            molteplicity_reached.wait();
+        if (get_counter == molteplicity_queue.top()){   //if the number is reached, the last process loops until all the processes waiting are resumed in FIFO order
+            get_counter--;                              //every process reduces the number of get_counter in the else branch, thus eventually getting back to 0
+            while (get_counter > 0)
+                molteplicity_reached.signal();
+            data = data_queue.dequeue();                //when the first process that reached the molteplicity has resumed everyone, he removes both the data and the 
+            molteplicity_queue.removeFirts();           //number n from the queues, and signals to the eventual adds that were waiting.
+            full_queue.signal();
+        }
+        else{
+            get_counter--;
+            data = data_queue.top();
+        }
+        return data;
+    }
+}

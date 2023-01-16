@@ -1,0 +1,43 @@
+Esercizio c.2: Un servizio viene fornito in modalità client-server usando message passing asincrono.
+Al fine di aumentare l'efficienza si decide di usare molti server e un processo dispatcher in grado di distribuire le
+richieste agli N server. Quando un processo server è libero riceve dal dispatcher la prossima richiesta da elaborare:
+codice di ogni client (tanti!): .....
+asend(<getpid(), request>, dispatcher)
+result = arecv(dispatcher)
+server process[i], i = 0, ..., N-1:
+ request = arecv(dispatcher)
+ result = compute(request)
+ asend(<getpid(), result>, dispatcher)
+Scrivere il processo dispatcher. (il dispatcher conosce i pid di tutti i server).
+
+extern int N;
+process dispatcher() {
+    // indice che tiene conto a quale server dover mandare
+    // per semplicità supponiamo che i server abbiano PID
+    // da 0 a N - 1
+    int i = 0; 
+
+    // mappa server a pid del processo che lo ha richiesto.
+    // chiave: pid del server
+    // value: queue richiesta dispatchata al server in chiave
+    map<int, queue<int>> mapper; 
+    while (true) {
+        res = arecv(ANY);
+        
+        // in questa parte l'importante è sapere
+        // se la richiesta proviene dal  server o da un altro
+        // processo, ho assunto che la disambiguazione 
+        // fosse immediata, un altro modo per checkare questo
+        // è vedere se il PID del messaggio rientri fra quelli
+        // noti al dispatcher.
+        if (<pid, request> = res) {
+            mapper[i].enqueue(pid);
+            asend(request, i /*il i-esimo server*/);
+            i++;
+            i %= N;
+        } else if (<pid, response> = res) {
+            requester_pid = mapper[pid].dequeue();
+            asend(response, requester_pid);
+        }
+    }
+}

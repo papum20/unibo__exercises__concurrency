@@ -1,0 +1,45 @@
+int num = 0; // se è positiva rappresenta numero di gets che aspettano, se negativa, numero di puts
+semaphore semput(0);
+semaphore semget(0);
+semaphore mutex(1);
+list<T> global_list;
+
+void put(T value) {
+    mutex.P();
+    if (num <= 0) {
+        num--;
+        mutex.V();
+        semput.P();
+        num++;
+    }
+    global_list.add(value);
+
+    if (num < 0)
+        semput.V();
+    else 
+        semget.V();
+
+    return;
+}
+
+
+list of T get() {
+    list<T> local_list;
+    mutex.P();
+
+    if (num >= 0) {
+        num++;
+        mutex.V();
+        semget.P();
+        num--;
+    } else {
+        semput.V();
+        semget.P();
+    }
+
+    local_list = global_list;
+    global_list = list<T>(); // put empty list
+    mutex.V(); 
+
+    return local_list;
+}
