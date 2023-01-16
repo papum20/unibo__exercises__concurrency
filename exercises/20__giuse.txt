@@ -9,6 +9,8 @@ usando la sasend (o spedito da qualsiasi processo se senders è vuoto).
 
 ----
 
+//in realta entrambe le soluzioni non mantengono la fifoness perché un messaggio rimandato a me stesso poi verrà ricevuto dopo altri arrivati nel frattempo, si dovrebbe mantenere una memoria(coda) di messaggi ricevuti in precedenza e non dei senders, e all'inizio della receive controllare prima quella e se non se ne trova uno giusto si fa la areceive.
+
 //SOL1
 
 

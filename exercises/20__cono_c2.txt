@@ -1,0 +1,55 @@
+/*
+ Esercizio c.2: Sia dato un meccanismo di message passing asincrono. 
+ Un numero imprecisato di processi client possono spedire messaggi 
+ (stringhe testuali) a N processi server (server0, …, servern-1). 
+ Quando un processo client vuole spedire un messaggio sceglie a caso 
+ uno dei server e lo spedisce ad esso. Scopo dell'esercizio è di
+ scrivere il codice dei processi server che garantiscano che:
+  - tutti i processi server stampino tutti i messaggi ricevuti 
+     (indipendentemente dal server che l'ha ricevuto)
+  - tutti i processi server stampino la stessa sequenza di messaggi.
+** L’esercizio deve essere svolto senza aggiungere ulteriori processi.
+*/
+
+
+//se si possono scrivere codici diversi per server diversi basta fare che un server riceve tutti i messaggi (fa da dispatcher) e li distribuisce agli altri
+//però penso che non si possa fare (e non lo faccio)
+
+//questa soluzione non stampa i messaggi nell'ordine di invio (dal testo pare che non importi, e soprattutto non mi sembra fattibile senza memoria condivisa e senza un processo dispatcher o con codice diverso dagli altri)
+
+//idea: nessuno stampa finché non ha ricevuto esattamente un messaggio da ogni altro server (anche nullo), poi appena li ha tutti li stampa in ordine del server; i messaggi tra i server girano a catena, da uno con numero minore a quello successivo
+
+#define MAX	//numero server da 0 a MAX-1
+
+process server[i] {
+	msg_t msgs[MAX] = {"",...,""};
+	int prev = (i + MAX - 1) % MAX;	//server precedente
+	int next = (i + 1) % MAX;		//successivo
+	
+	while(true) {
+		int msgs_n = 0;
+		<msg,pid> = arecv(ANY);
+		if(pid != prev) {		//può ricevere solo da prev o un client
+			//se è un client
+			pid = i;			
+		}
+		else {
+			asend(<"",i>, next);
+			msgs_n++;
+			//questo server ha un messaggio vuoto per questo turno
+		}
+		msgs[pid] = msg;
+		msgs_n++;
+		asend(<msg,pid>, next);
+		//ottieni un messaggio da ogni server
+		while(msgs_n < MAX) {
+			<msg,pid> = arecv(prev);
+			msgs[pid] = msg;
+			msgs_n++;
+			asend(<msg,pid>, next);
+		}
+		//stampa il messaggio di ogni server per questo turno
+		for(int i = 0; i < MAX; i++)
+			print(msgs[i]);
+	}
+}

@@ -1,0 +1,32 @@
+/*
+Message passing asincrono con lista mittenti
+*/
+
+void sasend(T message, int destination){
+    asend(<message, getPid()>, destination);
+}
+
+message sarecv(set senders){
+    int myPid = getPid();
+    if (senders.isEmpty()){
+        <message, sender_pid> = arecv(any);
+        return message;
+    }
+    else{
+        bool okMess = false;
+        T actualMess;
+        asend(<'Its me', myPid>, myPid);
+        while (!okMess || sender_pid != myPid){
+            <message, sender_pid> = arecv(any);
+            if (senders.contains(sender_pid) && !okMess){
+                okMess = true;
+                actualMess = message;
+            }
+            else{
+                if (sender_pid == myPid && okMess)
+                    break;
+                asend(<message, sender_pid> , myPid);
+            }
+        }
+    }
+}
