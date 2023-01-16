@@ -1,0 +1,42 @@
+//sincrono senza selezione del mittente
+
+sasend(msg_t msg, pid dest);
+msg_t sarecv(void);
+
+
+//sincrono con selezione del mittente
+
+
+//sbagliato: essendo sincrono, nel loop della recv non non si dovrebbe sbloccare
+un mittente a meno che non sia quello da cui si vuole ricevere:
+idea: metti una memoria (privata di ogni processo) in cui memorizzare messaggi
+ricevuti per sbaglio, e quando ne ricevi uno giusto (o lo ripeschi dalla memoria)
+mandi un ack
+*/
+
+void mssend(msg_t msg, pid dest) {
+	sasend(msg, dest);
+}
+
+
+//trattata come coda, ma permette di visitare elementi interni
+list<<msg,pid>> msgs;
+
+msg_t msrecv(pid sender) {
+	if(sender == ANY) {
+		<msg,p> = sarecv();
+		return msg;
+	}
+	for(<msg,p> in msgs) {
+		if(p == sender) {
+			msgs.remove(<msg,p>);
+			return msg;
+		}
+	}
+	<msg_t,pid> <msg,p> = sarecv();
+	while(p != sender) {
+		msgs.addLast(<msg,p);
+		<msg,p> = sarecv();
+	}
+	return msg;
+}

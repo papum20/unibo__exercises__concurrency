@@ -1,0 +1,67 @@
+TRACCIA:
+
+Un servizio di message passing sincrono senza selezione del mittente prevede una API con due funzioni:
+
+sasend(msg_t msg, pid dest);
+msg_t sarecv(void);
+
+La funzione sarecv restituisce il primo messaggio ricevuto da qualsiasi mittente ed è bloccante se non ci sono
+messaggi pendenti. la funzione sasend si blocca fino a quando il messaggio msg non viene ricevuto dal processo dest.
+Dato quindi un servizio di message passing sincrono senza selezione del mittente implementare un servizio di
+message passing sincrono (standard, quello definito nel corso) senza fare uso di processi server.
+
+
+SOLUZIONE:
+
+
+void ssend(msg_t msg, pid dest) {
+	sasend(<msg, getpid()>, dest);
+}
+
+msg_t srecv(pid senderPid) {
+	do {
+		<msg, pid> = sarecv();	
+	} while(pid != senderPid && senderPid != ANY);
+	return(msg);
+}
+
+
+
+ESECUZIONE:
+
+Process 202: sasend(<"Ciao", 202>, 300)
+202 attende che 300 riceva il messaggio
+
+Process 203: sasend(<"Ciao 2", 203>, 300)
+203 attende che 300 riceva il messaggio
+
+
+Process 300: 
+senderPid = 203
+1° iterazione do-while:
+	<msg, pid> = sarecv()	
+	msg = "Ciao"
+	pid = 202
+	pid != senderPid
+
+
+Process 202 si sblocca
+
+Process 204: sasend(<"Ciao 3", 204>, 300)
+204 attende che 300 riceva il messaggio
+
+
+Process 300:
+2° iterazione do-while:
+	<msg, pid> = sarecv();   //DUBBIO: sarecv() restituisce ancora <"Ciao", 202> o stavolta restituisce <"Ciao 3", 204> come ho scritto nell'esempio?
+	msg = "Ciao 3"
+	pid = 204
+	pid != senderPid
+
+Process 204 si sblocca
+
+...
+
+Il processo 203 attende all'infinito, perchè il suo messaggio non verrà mai ricevuto! (Ho ragione??)
+	 
+

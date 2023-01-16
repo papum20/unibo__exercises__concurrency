@@ -8,9 +8,10 @@ void chained_send(T msg, list<pid> dests) {
 
 T chained_recv(void) {
 	<list<pid>, T> <dests, msg> = sreceive(ANY);
-	pid dest = dests.first();
-
-	if(dest == get_pid())	// se era per me
+	if(!dests.empty()) {
+		pid dest = dests.first();
 		dests.remove_first();
-	chained_send(msg, dests);		
+		chained_send(msg, dests);		
+	}
+	return msg;
 }
