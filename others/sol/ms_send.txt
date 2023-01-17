@@ -1,0 +1,28 @@
+/*
+Esercizio c.2: Dato un servizio di message passing asincrono e senza fare uso di processi server:
+a) implementare un servizio di message passing sincrono a ricezione multipla. Questo servizio prevede due funzioni
+con la seguente interfaccia:
+ ms_send(pid dest, msg_t msg)
+ ms_recv(int n, pid *senders, msg_t *msgs)
+L'operazione di ricezione deve attendere n messaggi, provenienti dai mittenti indicati nel vettore senders (ogni
+elemento può essere ANY/*) e metterli ordinatamente nel vettore msgs (entrambi i vettori saranno stati
+opportunamente allocati e dimensionati dal chiamante). I processi mittenti degli n messaggi devono rimanere in
+attesa fino a che la ms_recv non può essere completata.
+b) analizzare i casi di deadlock che possono accadere in base alla definizione del servizio di message passing sincrono
+a ricezione multipla.
+*/
+
+void ms_send(pid dest, msg_t msg){
+    asend(<msg, getPid()>, dest);
+    ack = arecv(dest);
+}
+
+void ms_recv(int n, pid *senders, msg_t *msgs){
+    int pidSenders[senders.length()];                   //per rimandare gli ack in caso di ricezione da any
+    for(int i = 0; i < n; i++){
+        <msg[i], pidSenders[i]> = arecv(senders[i]);    //ricevo l'iesimo messaggio, mi salvo l'iesimo mittente. Ricevo dall'iesimo sender specificato
+    }
+    for(int i = 0; i < n; i++){
+        asend(ack, pidSenders[i]);                      //una volta ricevuti tutti mando gli ack grazie al vettore dei pid salvati
+    }
+}

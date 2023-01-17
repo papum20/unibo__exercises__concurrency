@@ -1,0 +1,25 @@
+//message passing async
+
+//A)
+
+//message passing sincrono a selezione multipla
+
+ms_send(pid dest, msg_t msg) {
+	asend(dest, <getpid(), msg>);
+	//presumo che dest non faccia una send a me prima di una receive (da me),
+	//perché, essendo sincrono, sarebbe deadlock in ogni caso
+	ack = arecv(dest);
+}
+
+ms_recv(int n, pid *senders, msg_t *msgs) {
+	//serve creare un nuovo array solo per any (perché non si può rimandare l'ack a any),
+	//altrimenti basterebbe il senders in input
+	pid_t senders_pid[n];
+	for(int i = 0; i < n; i++)
+		<senders_pid[i],msgs[i]> = arecv(senders[i]);
+	for(int i = 0; i < n; i++)
+		asend("ack", senders_pid[i]);
+}
+
+
+//B)

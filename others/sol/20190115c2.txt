@@ -1,0 +1,38 @@
+Dato un servizio di message passing asincrono e senza fare uso di processi server:
+a) implementare un servizio di message passing sincrono a ricezione multipla. Questo servizio prevede due funzioni
+con la seguente interfaccia:
+ ms_send(pid dest, msg_t msg)
+ ms_recv(int n, pid *senders, msg_t *msgs)
+L'operazione di ricezione deve attendere n messaggi, provenienti dai mittenti indicati nel vettore senders (ogni
+elemento può essere ANY/*) e metterli ordinatamente nel vettore msgs (entrambi i vettori saranno stati
+opportunamente allocati e dimensionati dal chiamante). I processi mittenti degli n messaggi devono rimanere in
+attesa fino a che la ms_recv non può essere completata.
+b) analizzare i casi di deadlock che possono accadere in base alla definizione del servizio di message passing sincrono
+a ricezione multipla.
+
+
+--- SOLUZIONE PROPOSTA
+ms_send(pid dest, msg_t msg) {
+	asend(dest, <msg, getpid()>);
+	ack = arecv(dest);
+}
+
+
+ms_recv(int n, pid *senders, msg_t *msgs) {
+	pid_t sender_pid[n];
+	for (int i = 0; i < n; i++) {
+		msgs[i], sender_pid[i] = arecv(senders[i]);
+	}
+
+	for (int i = 0; i < n; i++) {
+		asend(senders_pid[i], ACK);
+	}
+}
+
+
+Esempi di deadlock:
+
+Due processi A, B si aspettano messaggi l'un l'altro. (entrambi chiamano recv sull'altro), questo è un deadlock comune anche al message passing sincrono.
+L'esempio di sopra si può estendere in un caso più generale quando sia A un ms_recv ed esiste un processo all'interno di senders che stia aspettando un messaggio da A.
+Altro deadlock che può capitare è quando uno stesso processo è presente più volte all'interno di senders, in questo caso ricevo solo una volta, è impossibile che riesca a ricevere una altra volta.
+Per esempio basterebbe avere come input un (ANY, 1), e ricevere il primo messaggio da 1, e, nonostante soddisfi le specifiche, si avrebbe un deadlock.
