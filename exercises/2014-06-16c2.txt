@@ -1,0 +1,25 @@
+//message passing async con semafori
+
+
+#define MAX		//numero processi
+queue<msg> inboxes[MAX][MAX];
+semaphore available[MAX][MAX] = {{sem(0)...}};
+semaphore mutex[MAX] = {sem(1)...};
+
+void asend(msg m, pid_t dst) {
+	pid = getpid();
+	mutex[dst].P();
+	inboxes[pid][dst].enqueue(m);
+	available[pid][dst].V();
+	mutex[dst].V();
+}
+
+msg arecv(pid_t sender) {
+	pid = getpid();
+	msg m;
+	available[sender][pid].P();
+	mutex[pid].P();
+	m = inboxes[sender][pid].dequeue;
+	mutex[pid].V();
+	return m;
+}

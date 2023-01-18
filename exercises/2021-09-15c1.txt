@@ -1,0 +1,36 @@
+//at least rendez vous
+
+
+#define MAX
+
+
+monitor alrv {
+
+	int waiting[MAX];		//metto l'indice 0 solo per comodità, anche se non verrà mai usato
+	condition regroup[MAX];
+
+	alrv() {
+		waiting = {0...0};
+	}
+
+	procedure entry void at_least(int n) {
+		if(n <= 1)
+			return;
+		//trova il più alto numero da sbloccare
+		int sum = 0, unlocked = -1;
+		for(int i = 0; i < MAX; i++) {
+			sum += waiting[i];
+			if(sum >= i + 1) unlocked = i;
+		}
+		waiting[n - 1]++;
+		//se non trovato
+		if(unlocked == -1)
+			regroup[n - 1].wait();
+		waiting[n - 1]--;
+		//trova il prossimo (inferiore) da sbloccare a catena
+		int i = n - 1;
+		while(i > 0 && waiting[i] == 0) i--;
+		if(i >= 0) regroup[i].signal();
+	}
+
+}

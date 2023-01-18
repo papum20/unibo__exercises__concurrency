@@ -1,0 +1,27 @@
+#define MAX
+
+monitor rendezvous {
+
+	int values[MAX];
+	int waiting[MAX];
+	condition regroup[MAX];
+
+
+	rendezvous() {
+		waiting = {0...0};
+	}
+
+	sync(int n, int v[]) {
+		waiting[n]++;
+		if(waiting[n] < n)
+			regroup[n].wait();
+		values[n - waiting[n]] = v[0];
+		waiting[n]--;
+		regroup[n].signal();
+		//i processi che chiamano la signal a catena si mettono in attesa nello urgent stack
+		for(int i = 0; i < n; i++)
+			v[i] = values[i];
+	}
+
+
+}

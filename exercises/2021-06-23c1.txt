@@ -1,0 +1,24 @@
+
+monitor delayvalue {
+	#define NDELAY
+	int tmp;
+	int waiting;
+	condition delayed;
+
+	delayvalue() {
+		waiting = 0;
+	}
+
+	int delay(int value) {
+		if(waiting < NDELAY) {
+			waiting++;
+			delayed.wait();
+		}
+		else {
+			tmp = value;
+			delayed.signal();
+			delayed.wait();
+		}
+		return tmp;
+	}
+}

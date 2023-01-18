@@ -1,0 +1,24 @@
+// dato async
+def call4fun(x) {
+	asend(server, (getpid(), x, 0, 1));
+	return(arecv(server));
+}
+
+
+process server {
+	forever {
+		(s, n, r, v) = arecv(*);
+		if(n > 0)
+			asend(server, (s, n-1, r+v, v+2));
+		else
+			asend(s, r);
+	}
+}
+
+
+/*
+invia "l'input" a server, che calcola, usando un message passing a se stesso come chiamate ricorsive, e uno a chi ha inviato
+l'input come caso base, n**2;
+-	notare che server riceve da ANY proprio per ricevere sia la chiamata ricorsiva che l'input;
+-	notare anche che server può gestire più input contemporaneamente, alternando l'esecuzione sull'uno e sull'altro, visto
+	che ogni messaggio contiene sempre il mittente a cui rispedire alla fine

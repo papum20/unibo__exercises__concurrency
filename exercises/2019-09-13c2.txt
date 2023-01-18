@@ -1,0 +1,48 @@
+process bohm[i, i=0,1] {
+	for (;;) {
+		m.pre(i);
+		print(i);
+		m.post(i);
+	}
+}
+
+monitor m:
+	condition ok[2];
+	state = 0;
+
+	procedure entry pre(int n) {
+		if (state != n)
+			ok[n].wait();
+	}
+	procedure entry post(int n) {
+		state = 1 - state;
+		ok[state].signal()
+	}
+}
+
+/*
+	stampa, alternando, 0 e 1 (prima 0);
+	infatti il monitor, che parte con state=0, ogni volta che un processo lo chiama,
+	se n è lo stato attuale (quello che verrà stampato) procede subito senza bloccarsi, altrimenti
+	si blocca in attesa che arrivi un processo con n=state, che poi cambierà lo stato dopo la stampa.
+*/
+
+
+
+semaphore ok[2] = {sem(1), sem(0)};
+
+process bohs[i, i=0,1] {
+	for (;;) {
+		pre(i);
+		print(i);
+		post(i);
+	}
+}
+
+void pre(int n) {
+	ok[n].P();
+}
+
+void post(int n) {
+	ok[1-n].V();
+}

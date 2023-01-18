@@ -1,0 +1,25 @@
+/*
+**  Esercizio c.2: Usando semafori implementare un emulatore di un servizio di message passing asincrono.
+**  Occorre quindi implementare le primitive:
+**  void asend(msg m, pid_t dst)
+**  msg arecv(pid_t sender)
+**  facendo uso di semafori (generali, fifo).
+**  (e' presente una chiamata getpid() che fornisce il pid del chiamante). La asend riceve da un mittente specificato (non e' richiesta la 
+**  gestione della ricezione da qualunque processo).
+*/
+
+semaphore mutex = semaphore(1)
+queue<msg> waiting[N_PROC][N_PROC]
+semaphore empty[N_PROC][N_PROC] = semaphore(0)
+
+void asend(msg m, pid_t dst):
+    mutex.P()
+    waiting[getpid()][dst].enqueue(m)
+    empty[getpid()][dst].V()
+    mutex.V()
+
+msg arecv(pid_t sender):
+    mutex.P()
+    empty[sender][getpid()].P()
+    msg received = waiting[sender][getpid()].dequeue()
+    mutex.V()

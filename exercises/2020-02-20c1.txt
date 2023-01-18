@@ -1,0 +1,30 @@
+#define MAX_TICKS
+
+monitor delay {
+
+	int waiting;
+	int ticks;
+	condition ticks_passed[MAX_TICKS];
+
+
+	delay() {
+		waiting = 0;
+		ticks = 0;
+	}
+
+
+	boolean delay(unsigned int timeout) {
+		waiting++;
+		ticks_passed[ticks + timeout].wait();
+		waiting--;
+	}
+
+	int count(void) {
+		return waiting;
+	}
+
+	void tick(void) {
+		ticks++;
+	}
+
+}
