@@ -1,0 +1,36 @@
+
+#define N
+
+
+semaphoreN {
+
+	semaphore mutex;
+	semaphore sem;
+	val;
+
+	semaphoreN(init) {
+		if(init < -N || init > N)
+			return Error;
+		val = init;
+		mutex = semaphore(1);
+		sem = semaphore(init + N);
+	}
+
+	PN() {
+		sem.P();
+		mutex.P();
+		val++;
+		mutex.V();
+	}
+
+	VN() {
+		mutex.P();
+		if(val > -N) {
+			val--;
+			sem.V();
+		}
+		//altrimenti significa che sono già state fatte N V senza P, cioè possono passare
+		// N processi con una P prima che venga fatta un'altra V
+		mutex.V();
+	}
+}

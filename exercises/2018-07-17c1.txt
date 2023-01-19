@@ -1,0 +1,63 @@
+La vita di un barista del Delirium è:
+	while True:
+		(type, quantity) = get_order()
+		delirium.pour(type, quantity)
+
+La vita di un Magazziniere è:
+	while True:
+		type = delirium.isempty()
+		capacity = change_keg(type)
+		delirium.loaded(type, capacity)
+
+
+
+
+#define TYPES 2000	//tipi di birra
+
+
+monitor delirium {
+
+	float available[TYPES];
+	queue<type_t> empty;
+	condition refill[TYPES];
+	condition idle;
+
+
+	delirium(initial[TYPES]) {
+		//inizializza le quantità disponibili in qualche modo
+		available.copy(initial);
+		empty = new queue();
+	}
+
+	pour(type, quantity) {
+		if(available[type] == 0)
+			//vale che ci sia già un barista ad aspettare o meno, verrà risvegliato dal magazziniere o a catena dal barista
+			refill.wait();
+			//si blocca perché poi verrà svegliato dal barista avanti se c'è, altrimenti dal magazziniere
+		if(quantity >= available[type]) {
+			//se il barile si svuota
+			quantity -= available[type];
+			empty.enqueue(type);
+			idle.signal();
+			//se barile vuoto ma il barista non ha riempito tutto
+			if(quantity > 0)
+				refill[type].wait();
+		}
+		//in ogni caso (anche se fa -0)
+		available[type] -= quantity;
+		refill.signal();
+	}
+
+	loaded(type, capacity) {
+		available[type] = capacity;
+		//sveglia qualcuno solo se un barista stava aspettando
+		refill.signal();
+	}
+
+	type_t isempty() {
+		if(empty.size == 0)
+			idle.wait();
+		return empty.dequeue();
+	}
+
+}
